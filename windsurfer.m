@@ -86,7 +86,7 @@ if numel(targetDay)==1, targetDay = ['0',targetDay];end
 if numel(targetMonth)==1, targetMonth = ['0',targetMonth];end
 % if numel(targetHour)==1, targetHour = ['0',targetHour];end
 %% Preallocation and initalisation
-data = struct('time',[],'lon',[],'lat',[],'ff',[],'dd',[],'fv',[],'dc',[],'hs',[],'tp',[],...
+data = struct('time',[],'lon',[],'lat',[],'fpi',[],'ff',[],'dd',[],'fv',[],'dc',[],'hs',[],'tp',[],...
     'hs_sea',[],'tp_sea',[],'hs_swell',[],'tp_swell',[],...
     'thq',[],'thq_sea',[],'thq_swell',[],'sic',[],'sit',[],'model_depth',[]);
 urldat= ['https://thredds.met.no/thredds/dodsC/windsurfer/mywavewam3km_files/',...
@@ -105,7 +105,7 @@ if numel(targetLat)==1 &&   numel(targetLon)==1
     offsetLon = 0.15;
     [~,indStart] = min(sqrt((lat00(:)-(targetLat(1)-offsetLat)).^2 + abs(lon00(:)-(targetLon(1)-offsetLon)).^2));
     [~,indEnd] = min(sqrt((lat00(:)-(targetLat(1)+offsetLat)).^2 + abs(lon00(:)-(targetLon(1)+offsetLon)).^2));
-elseif numel(targetLat)==2 &&   numel(targetLat)==2
+elseif numel(targetLat)==2 && numel(targetLon)==2
     
     offsetLat = 0.5*sqrt(diff(targetLat).^2 + diff(targetLon).^2);
     offsetLon = offsetLat;
@@ -143,8 +143,9 @@ if ~isempty(newLat),
             myVar0 = ncread(urldat,output{ii},[r1,c1],[cr,cc]);
             dummyVar = double(reshape(myVar0,[],1));
             F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),dummyVar(ind),'linear','none');
-            data.(lower(output{ii}))(jj,:) = F_Var(lat,lon);
+            data.(lower(output{ii})) = F_Var(lat,lon);
         else
+
             myVar0 = ncread(urldat,output{ii},[r1,c1,1],[cr,cc,Nhour]);
             
             
@@ -160,6 +161,14 @@ if ~isempty(newLat),
                     newDir = atan2(newUn,newUe).*180/pi;
                     newDir(newDir<=0) = newDir(newDir<=0)+ 360;
                     data.(lower(output{ii}))(jj,:) = newDir;
+                elseif contains(output{ii},'tp')
+
+                    tp_c = correctTp(dummyVar(ind));
+                    %                     tp_c = (dummyVar(ind));
+                    F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),tp_c,'linear','none');
+
+
+                    data.(lower(output{ii}))(jj,:) = F_Var(lat,lon);
                 else
                     F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),dummyVar(ind),'linear','none');
                     data.(lower(output{ii}))(jj,:) = F_Var(lat,lon);
@@ -169,11 +178,11 @@ if ~isempty(newLat),
     end
 else
     for ii=1:Nout
-        if strcmpi(output{ii},'model_depth'),
+        if strcmpi(output{ii},'model_depth')
             myVar0 = ncread(urldat,output{ii},[r1,c1],[cr,cc]);
             dummyVar = double(reshape(myVar0,[],1));
             F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),dummyVar(ind),'linear','none');
-            data.(lower(output{ii}))(jj,:,:) = F_Var(lat,lon);
+            data.(lower(output{ii})) = F_Var(lat,lon);
         else
             myVar0 = ncread(urldat,output{ii},[r1,c1,1],[cr,cc,Nhour]);
             
@@ -190,6 +199,11 @@ else
                     newDir = atan2(newUn,newUe).*180/pi;
                     newDir(newDir<=0) = newDir(newDir<=0)+ 360;
                     data.(lower(output{ii}))(jj,:,:) = newDir;
+                elseif contains(output{ii},'tp')
+                    tp_c = correctTp(dummyVar(ind));
+%                     tp_c = (dummyVar(ind));
+                    F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),tp_c,'linear','none');
+                    data.(lower(output{ii}))(jj,:,:) = F_Var(lat,lon);
                 else
                     F_Var = scatteredInterpolant(dummyLat(ind),dummyLon(ind),dummyVar(ind),'linear','none');
                     data.(lower(output{ii}))(jj,:,:) = F_Var(lat,lon);
@@ -201,4 +215,11 @@ end
 data.lon = lon;
 data.lat = lat;
 
+
+    function tp_c = correctTp(tp)
+        K=log(tp/3.244);
+        I= round(1+(K/0.09525));
+        r = rand(size(tp));
+        tp_c=3.244*exp(0.09525*(I-0.5-r));
+    end
 end
