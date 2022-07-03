@@ -1,4 +1,4 @@
-# Met-ocean data extraction from WINDSURFER/NORA3
+# Met-ocean data extraction with NORA3
 
 [![View Met-ocean data extraction from WINDSURFER/NORA3 on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://se.mathworks.com/matlabcentral/fileexchange/103055-met-ocean-data-extraction-from-windsurfer-nora3)
 
